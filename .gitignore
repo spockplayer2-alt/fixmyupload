@@ -1,0 +1,9 @@
+node_modules/
+dist/
+test-results/
+playwright-report/
+.superpowers/
+.env*
+.DS_Store
+*.tsbuildinfo
+.render_temp_*

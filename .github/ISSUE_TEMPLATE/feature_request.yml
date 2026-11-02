@@ -1,0 +1,15 @@
+name: Feature request
+description: Suggest a focused improvement.
+body:
+  - type: textarea
+    id: need
+    attributes:
+      label: What are you trying to do?
+      description: Describe the upload problem and why the current tool doesn't solve it.
+    validations:
+      required: true
+  - type: textarea
+    id: idea
+    attributes:
+      label: Suggested behavior
+      description: Include relevant formats and privacy or browser constraints.
