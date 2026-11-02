@@ -10,7 +10,7 @@ test('converts, resizes, validates and downloads a real image', async ({ page })
   await page.getByLabel('Maximum width').fill('400');
   await page.getByLabel('Maximum file size').fill('100');
   await page.getByRole('button', { name: 'Fix my file' }).click();
-  await expect(page.getByRole('heading', { name: 'Ready for another try.' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Your file is ready.' })).toBeVisible();
   await expect(page.getByTestId('result-dimensions')).toContainText('400 × 300');
   const downloaded = page.waitForEvent('download');
   await page.getByRole('button', { name: 'Download file' }).click();
@@ -25,6 +25,7 @@ test('converts, resizes, validates and downloads a real image', async ({ page })
 });
 test('parser previews before applying and conflicts prevent processing', async ({ page }) => {
   await page.goto('/');
+  await page.getByLabel('Choose files', { exact: true }).setInputFiles(fixture);
   await page
     .getByLabel('Paste the upload error')
     .fill('Only JPG or PNG images under 500 KB, minimum 600x600 pixels.');
@@ -33,7 +34,6 @@ test('parser previews before applying and conflicts prevent processing', async (
   await page.getByRole('button', { name: 'Apply detected requirements' }).click();
   await expect(page.getByLabel('Minimum width')).toHaveValue('600');
   await page.getByLabel('Maximum width').fill('300');
-  await page.getByLabel('Choose files').setInputFiles(fixture);
   await expect(page.getByRole('button', { name: 'Fix my file' })).toBeDisabled();
   await expect(page.getByRole('alert')).toContainText(/width/i);
 });
@@ -42,7 +42,7 @@ test('images become a validated PDF', async ({ page }) => {
   await page.getByRole('tab', { name: 'PDF tools' }).click();
   await page.getByLabel('Choose files').setInputFiles([fixture]);
   await page.getByRole('button', { name: 'Create PDF' }).click();
-  await expect(page.getByRole('heading', { name: 'Ready for another try.' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Your file is ready.' })).toBeVisible();
   await expect(page.getByTestId('result-pages')).toContainText('1 page');
 });
 test('unsupported and damaged files get meaningful errors', async ({ page }) => {
@@ -89,7 +89,7 @@ test('image PDF uses the EXIF-corrected portrait orientation', async ({ page }) 
   await page.getByRole('tab', { name: 'PDF tools' }).click();
   await page.getByLabel('Choose files').setInputFiles(path.resolve('tests/fixtures/oriented.jpg'));
   await page.getByRole('button', { name: 'Create PDF' }).click();
-  await expect(page.getByRole('heading', { name: 'Ready for another try.' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Your file is ready.' })).toBeVisible();
   const downloadEvent = page.waitForEvent('download');
   await page.getByRole('button', { name: 'Download file' }).click();
   const download = await downloadEvent;

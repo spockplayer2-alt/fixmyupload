@@ -2,6 +2,7 @@ export type Format = 'jpeg' | 'png' | 'webp' | 'pdf';
 export type ImageFormat = Exclude<Format, 'pdf'>;
 export interface Requirements {
   formats: Format[];
+  minBytes?: number;
   maxBytes?: number;
   minWidth?: number;
   minHeight?: number;
@@ -31,6 +32,12 @@ export interface ImageOptions {
   quality: number;
   fit: 'contain' | 'crop' | 'pad';
   background: string;
+  rotation?: 0 | 90 | 180 | 270;
+  flipHorizontal?: boolean;
+  flipVertical?: boolean;
+  /** Crop placement from the leading edge (0) to the trailing edge (1). */
+  cropX?: number;
+  cropY?: number;
 }
 export interface Output {
   blob: Blob;

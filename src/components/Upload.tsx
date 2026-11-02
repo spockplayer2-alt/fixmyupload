@@ -1,123 +1,64 @@
-import { useEffect, useRef, useState } from 'react';
-import { ArrowUpRight, FileImage, FileText, LockKeyhole, Plus, X } from 'lucide-react';
-import type { FileInfo } from '../types/files';
-import { formatBytes } from '../lib/format';
-interface Props {
-  files: File[];
-  infos: FileInfo[];
+import { useRef, useState } from 'react';
+import { ArrowUp, FileImage, LockKeyhole } from 'lucide-react';
+export function Upload({
+  busy,
+  pdf,
+  onFiles,
+}: {
   busy: boolean;
   pdf: boolean;
   onFiles: (files: File[]) => void;
-  onClear: () => void;
-}
-export function Upload({ files, infos, busy, pdf, onFiles, onClear }: Props) {
+}) {
   const input = useRef<HTMLInputElement>(null);
   const [drag, setDrag] = useState(false);
-  const previewRef = useRef<HTMLImageElement>(null);
-  useEffect(() => {
-    if (files[0] && infos[0] && infos[0].format !== 'pdf') {
-      const url = URL.createObjectURL(files[0]);
-      if (previewRef.current) previewRef.current.src = url;
-      return () => URL.revokeObjectURL(url);
-    }
-  }, [files, infos]);
   return (
-    <section className="upload-section" aria-labelledby="file-heading">
-      <div className="section-label">
-        <span>01 / YOUR FILE{pdf ? 'S' : ''}</span>
-        <span className="small-label">
-          {files.length ? `${files.length} selected` : 'Start here'}
-        </span>
-      </div>
+    <section
+      className={`dropzone ${drag ? 'dragging' : ''}`}
+      aria-label="Choose your files"
+      onDragOver={(e) => {
+        e.preventDefault();
+        if (!busy) setDrag(true);
+      }}
+      onDragLeave={(e) => {
+        if (!e.currentTarget.contains(e.relatedTarget as Node)) setDrag(false);
+      }}
+      onDrop={(e) => {
+        e.preventDefault();
+        setDrag(false);
+        if (!busy) onFiles(Array.from(e.dataTransfer.files));
+      }}
+    >
       <input
         ref={input}
         className="visually-hidden"
         type="file"
         aria-label="Choose files"
         accept="image/jpeg,image/png,image/webp,application/pdf"
-        multiple={pdf}
+        multiple
         disabled={busy}
         onChange={(e) => {
           onFiles(Array.from(e.target.files ?? []));
           e.target.value = '';
         }}
       />
-      <div
-        className={`dropzone ${drag ? 'dragging' : ''} ${files.length ? 'has-file' : ''}`}
-        onDragOver={(e) => {
-          e.preventDefault();
-          if (!busy) setDrag(true);
-        }}
-        onDragLeave={() => setDrag(false)}
-        onDrop={(e) => {
-          e.preventDefault();
-          setDrag(false);
-          if (!busy) onFiles(Array.from(e.dataTransfer.files));
-        }}
-      >
-        {files.length ? (
-          <>
-            <div className="file-preview">
-              {infos[0]?.format !== 'pdf' ? (
-                <img ref={previewRef} alt="Original file preview" />
-              ) : (
-                <FileText size={64} strokeWidth={1} />
-              )}
-              <span className="preview-tag">ORIGINAL</span>
-            </div>
-            <div className="file-list">
-              {infos.map((info, i) => (
-                <div className="file-line" key={`${i}-${info.name}`}>
-                  <div className="file-details">
-                    <strong>{info.name}</strong>
-                    <span>
-                      {info.format.toUpperCase()} <b>·</b> {formatBytes(info.size)} <b>·</b>{' '}
-                      {info.width
-                        ? `${info.width} × ${info.height} px`
-                        : `${info.pages} page${info.pages === 1 ? '' : 's'}`}
-                    </span>
-                  </div>
-                </div>
-              ))}
-            </div>
-            <div className="file-actions">
-              <button
-                className="text-button"
-                onClick={() => input.current?.click()}
-                disabled={busy}
-              >
-                <Plus size={15} /> Replace {pdf ? 'files' : 'file'}
-              </button>
-              <button
-                className="icon-button"
-                onClick={onClear}
-                disabled={busy}
-                aria-label="Clear files"
-              >
-                <X size={17} />
-              </button>
-            </div>
-          </>
-        ) : (
-          <button className="drop-trigger" onClick={() => input.current?.click()} disabled={busy}>
-            <span className="file-illustration">
-              <FileImage size={43} strokeWidth={1.25} />
-              <span className="illustration-arrow">
-                <ArrowUpRight size={23} />
-              </span>
-            </span>
-            <h2 id="file-heading">Drop your file{pdf ? 's' : ''} here</h2>
-            <span>
-              or <u>browse files</u> on your device
-            </span>
-            <small>JPG, PNG, WebP or PDF · up to 30 MB each</small>
-          </button>
-        )}
+      <div className="upload-mark" aria-hidden="true">
+        <FileImage size={32} strokeWidth={1.5} />
+        <span>
+          <ArrowUp size={14} />
+        </span>
       </div>
-      <div className="local-note">
-        <LockKeyhole size={14} />
-        <span>Your files stay on this device. Always.</span>
-      </div>
+      <h2>Drop your file{pdf ? 's' : ''} here</h2>
+      <p>or choose {pdf ? 'files' : 'a file'} from your device</p>
+      <button className="button primary" onClick={() => input.current?.click()} disabled={busy}>
+        {busy ? 'Reading files…' : 'Choose files'}
+        <ArrowUp size={16} />
+      </button>
+      <span className="upload-formats">
+        JPG, PNG, WebP & PDF <span>·</span> Up to 30 MB each
+      </span>
+      <span className="local-note">
+        <LockKeyhole size={13} /> Files stay on your device
+      </span>
     </section>
   );
 }

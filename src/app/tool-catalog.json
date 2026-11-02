@@ -1,0 +1,93 @@
+[
+  {
+    "slug": "compress-image",
+    "title": "Compress image",
+    "description": "A smaller file. The detail that matters.",
+    "category": "image"
+  },
+  {
+    "slug": "resize-image",
+    "title": "Resize image",
+    "description": "The right dimensions, without distortion.",
+    "category": "image"
+  },
+  {
+    "slug": "convert-image",
+    "title": "Convert image",
+    "description": "Switch between JPG, PNG and WebP.",
+    "category": "image"
+  },
+  {
+    "slug": "crop-image",
+    "title": "Crop image",
+    "description": "Fit a shape. Choose what stays in frame.",
+    "category": "image"
+  },
+  {
+    "slug": "remove-metadata",
+    "title": "Remove metadata",
+    "description": "Export a clean image without EXIF data.",
+    "category": "image"
+  },
+  {
+    "slug": "batch-images",
+    "title": "Batch process images",
+    "description": "One set of settings. Up to 20 images.",
+    "category": "image"
+  },
+  {
+    "slug": "compress-to-500kb",
+    "title": "Compress to 500 KB",
+    "description": "A checked size limit for upload forms.",
+    "category": "image"
+  },
+  {
+    "slug": "merge-pdf",
+    "title": "Merge PDF",
+    "description": "Bring documents together in file order.",
+    "category": "pdf",
+    "operation": "merge"
+  },
+  {
+    "slug": "split-pdf",
+    "title": "Split PDF",
+    "description": "Save each page as its own document.",
+    "category": "pdf",
+    "operation": "split"
+  },
+  {
+    "slug": "extract-pages",
+    "title": "Extract pages",
+    "description": "Keep just the pages you need.",
+    "category": "pdf",
+    "operation": "extract"
+  },
+  {
+    "slug": "remove-pages",
+    "title": "Remove pages",
+    "description": "Leave unwanted pages behind.",
+    "category": "pdf",
+    "operation": "remove"
+  },
+  {
+    "slug": "reorder-pages",
+    "title": "Reorder pages",
+    "description": "Put every page in the right place.",
+    "category": "pdf",
+    "operation": "reorder"
+  },
+  {
+    "slug": "rotate-pdf",
+    "title": "Rotate PDF",
+    "description": "Turn selected pages the right way up.",
+    "category": "pdf",
+    "operation": "rotate"
+  },
+  {
+    "slug": "image-to-pdf",
+    "title": "Images to PDF",
+    "description": "One image per page, neatly fitted.",
+    "category": "pdf",
+    "operation": "images"
+  }
+]

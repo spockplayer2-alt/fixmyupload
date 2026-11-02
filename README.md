@@ -4,7 +4,7 @@
     <img src="assets/branding/logo-light.svg" alt="FixMyUpload" width="290">
   </picture>
 </p>
-<p align="center"><strong>Fix rejected files in seconds.</strong></p>
+<p align="center"><strong>Fix files that websites reject.</strong></p>
 <p align="center">Convert, compress, resize and check images and PDFs against a website's upload requirements.<br>Free, local to your browser, and open source.</p>
 <p align="center">
   <a href="https://github.com/spockplayer2-alt/fixmyupload/actions/workflows/ci.yml"><img src="https://github.com/spockplayer2-alt/fixmyupload/actions/workflows/ci.yml/badge.svg" alt="CI status"></a>
@@ -13,7 +13,15 @@
 
 [**Open FixMyUpload**](https://spockplayer2-alt.github.io/fixmyupload/)
 
-![FixMyUpload running in a desktop browser](docs/screenshot.png)
+![FixMyUpload 2.0 running in a desktop browser](docs/screenshot.png)
+
+<details>
+<summary>See the workspace and results</summary>
+
+![File workspace](docs/screenshot-workspace.png)
+![Validated result](docs/screenshot-result.png)
+
+</details>
 
 ## Why FixMyUpload?
 
@@ -27,8 +35,11 @@ A rejected upload shouldn't send you through a string of unrelated tools. FixMyU
 - Search for an image size limit by lowering quality, then dimensions where permitted.
 - Resize with minimum, maximum or exact dimensions; preserve shape, center-crop or add background padding.
 - Keep transparency in PNG/WebP, or choose a background for JPEG.
+- Rotate and flip images, choose crop placement, and remove image metadata.
+- Process up to 20 images with shared settings and download real outputs as a ZIP.
+- Save reusable presets on your device with an explicit Save action; only settings are stored.
 - Read common English upload errors with a deterministic parser. Review detected limits before applying them; ambiguous messages require confirmation.
-- Turn images into an A4 PDF, merge PDFs, extract or remove pages, reorder every page, or split a PDF into individual files.
+- Turn images into an A4 PDF, merge PDFs, extract or remove pages, reorder every page, split a PDF into individual files, or rotate selected pages. Preview real PDF pages locally and select/reorder them with keyboard-accessible controls.
 - Compare original metadata, requirements and measured output. A failed check is always shown as a failure.
 - Download sensible filenames without accounts, watermarks or subscriptions.
 - Use either theme on desktop or mobile, with keyboard access and reduced-motion support.
@@ -44,23 +55,23 @@ Files are selected locally. “Upload” refers to the website you're trying to 
 
 ## Privacy
 
-File processing, previews and error parsing run on your device. There is no backend, analytics, tracking, external conversion service, AI API or document storage. Temporary object URLs are revoked when files/results are replaced or the tool is closed. Reloading clears the session.
+File processing, previews and error parsing run on your device. There is no backend, analytics, tracking, external conversion service, AI API or document storage. Presets persist settings only after you choose **Save preset**, and can be deleted in the app. Temporary object URLs are revoked when files/results are replaced or the tool is closed. Reloading clears the session.
 
 The host receives normal requests for the app, including your IP address. Following the GitHub link opens GitHub. The README's status badges are external images; the application itself doesn't load those badges. See the [privacy policy](docs/privacy.md).
 
 ## Supported formats
 
-| Input           | Output          | Operations                                         |
-| --------------- | --------------- | -------------------------------------------------- |
-| JPEG, PNG, WebP | JPEG, PNG, WebP | Conversion, compression, resizing, validation      |
-| JPEG, PNG, WebP | PDF             | One image per A4 page, in selection order          |
-| Unencrypted PDF | PDF             | Merge, split, extract, remove, reorder, validation |
+| Input           | Output          | Operations                                                          |
+| --------------- | --------------- | ------------------------------------------------------------------- |
+| JPEG, PNG, WebP | JPEG, PNG, WebP | Conversion, compression, resizing, validation                       |
+| JPEG, PNG, WebP | PDF             | One image per A4 page, in selection order                           |
+| Unencrypted PDF | PDF             | Merge, split, extract, remove, reorder, rotate, preview, validation |
 
 WebP encoding depends on browser support; an unsupported encoder produces an error. Animated inputs become a single frame. Image processing removes metadata and honors EXIF orientation. HEIC, GIF, SVG, Office documents and PDF-to-image conversion are not supported.
 
 ## Getting started
 
-Use Node.js **22.12 or newer** and npm.
+Use Node.js **24 or newer** and npm.
 
 ```bash
 git clone https://github.com/spockplayer2-alt/fixmyupload.git
@@ -97,9 +108,9 @@ CI installs its Linux browser dependencies with `npx playwright install --with-d
 
 ## Technical details
 
-React + strict TypeScript on Vite. Custom CSS uses a small token system; Lucide provides interface icons. Canvas does image encoding; a bounded quality/dimension search aims for the requested byte limit without crossing minimum dimensions. Outputs are decoded again and validated after encoding.
+React + strict TypeScript on Vite. Custom CSS uses a documented neutral token system, locally bundled Geist, and Lucide icons. Canvas does image encoding; a bounded quality/dimension search aims for the requested byte limit without crossing minimum dimensions. Outputs are decoded again and validated after encoding.
 
-PDF operations use `pdf-lib` inside short-lived Web Workers, loaded only when a PDF is needed. Workers time out after 60 seconds and keep original buffers intact. Requirements parsing and validation are plain TypeScript modules with no network dependencies.
+PDF operations use `pdf-lib` inside short-lived, cancellable Web Workers, loaded only when a PDF is needed. PDF.js and its local worker load when the page preview is opened. ZIP downloads use a lazy-loaded fflate worker. Workers time out after 60 seconds and keep original buffers intact. Requirements parsing and validation are plain TypeScript modules with no network dependencies.
 
 - `src/features/image/`: safe image decoding, dimensional planning and encoding
 - `src/features/pdf/`: PDF engine, message protocol and worker lifecycle
@@ -108,7 +119,7 @@ PDF operations use `pdf-lib` inside short-lived Web Workers, loaded only when a 
 - `src/components/`: upload, requirements, results and branding
 - `tests/`: unit contracts, React interaction tests, real browser processing and downloads
 
-The build is a static `dist/` directory. Relative asset paths support GitHub Pages and subdirectory hosting. See [architecture and limits](docs/architecture.md), [visual system](docs/visual-system.md), and the [roadmap](docs/roadmap.md).
+The build is a static `dist/` directory, including 14 working tool routes, per-page metadata, a sitemap and a custom 404. Relative asset paths support GitHub Pages and subdirectory hosting. See [architecture and limits](docs/architecture.md), [visual system](docs/visual-system.md), and the [roadmap](docs/roadmap.md).
 
 ## Limits worth knowing
 
@@ -118,6 +129,9 @@ The build is a static `dist/` directory. Relative asset paths support GitHub Pag
 - Center-cropping removes edges. Padding uses the chosen background. Enlarging cannot recover detail. Color profiles and image metadata are not preserved; browser encoding can vary.
 - English parsing covers explicit formats, maximum sizes, dimensions, aspect ratios and maximum pages. It cannot understand every website's instructions. Inspect the values; website content checks, face recognition, DPI, and document semantics are outside scope.
 - Use a current browser with Canvas, `createImageBitmap` and module Web Workers. Large operations use memory on your device. PDFs stay off the main thread; image decoding/drawing can briefly occupy it.
+- Minimum byte limits are validated, not achieved by adding meaningless bytes. A result below the requested minimum is marked as failed.
+- Image transforms use the current settings for every image in the batch. A batch stops on a failed conversion; no partial success is presented.
+- PDF thumbnails render in windows of 12 pages to bound memory.
 - A valid file can still be rejected by a website with additional undisclosed checks.
 
 ## Contributing

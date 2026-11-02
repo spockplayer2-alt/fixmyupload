@@ -1,12 +1,15 @@
-# v0.1.0 verification
+# Version 2.0 verification
 
-Verified locally on November 2, 2026 with Node 24 and Chromium:
+Verified locally on November 2, 2026 with Node24 and Chromium.
 
 - Strict TypeScript, ESLint and Prettier checks passed.
-- 81 unit/integration tests passed: format detection, dimensional planning, conservative parsing, conflicts, output validation, PDF operations and worker lifecycle, and parser UI confirmation.
-- 16 desktop/mobile Chromium tests passed for conversions, downloads, sizing, transparency, EXIF orientation, compression, crop/pad and error handling. After release review, targeted Chromium regressions for EXIF-corrected image PDFs and privacy-dialog keyboard focus passed.
-- Production build passed. Main JavaScript: 270.58 kB (85.92 kB gzip); CSS: 16.60 kB (4.38 kB gzip). PDF code is a separate 425.53 kB worker loaded only when needed.
-- Dependency installation audited clean after overriding minimatch to the patched 11.x release. No runtime or development advisories remained at that check.
-- Real screenshots captured from the running app are included in this directory, in light, dark and mobile views.
+- 102 unit/integration tests passed, covering preserved operations plus batch limits, transforms, minimum-byte requirements, PDF rotation and immediate worker cancellation.
+- Desktop/mobile browser coverage exercises real encoders, EXIF orientation, transparency, size search, downloads, batch ZIP contents, settings-only presets, native rotation/flip pixels, PDF previews, selected-page rotation, empty-selection errors, dialogs and tool routes. See CI for the final executed browser count and status.
+- All14 production tool routes returned200 locally and displayed working inputs, correct titles and one matching canonical URL. No browser page errors occurred.
+- Visual reviews inspected home, workspace, results and dark/mobile screenshots. Widths360,390,768,1024,1440 and1920px showed no horizontal overflow. A200% CSS-zoom layout check and360px long-filename/long-error check also showed no overflow; this is not a complete WCAG certification.
+- Main JavaScript293.12kB (92.35kB gzip), CSS23.20kB (5.42kB gzip), and three locally bundled font weights. PDF processing425.80kB, PDF.js renderer444.23kB and its1.27MB worker load on demand. ZIP support is also lazy.
+- Runtime dependency audit found zero advisories. Geist's SIL Open Font License is included with the distributed assets.
 
-Automated browser coverage is Chromium only. Firefox and WebKit are not yet in CI. CI and deployment status are visible in GitHub Actions; local evidence is not a claim about a pending remote run.
+The compression browser test allows60seconds for the bounded quality/dimension search on contended machines; it still verifies actual bytes, dimensions and failed impossible constraints. Browser automation currently covers Chromium desktop and mobile emulation. Firefox/WebKit coverage remains future work.
+
+GitHub Actions verifies the PR before normal merging. Deployment follows passing main-branch CI; release status must be checked on GitHub rather than inferred from local tests.

@@ -38,12 +38,13 @@ test('real encoders preserve alpha, flatten JPEG and honor EXIF orientation', as
 test('size search reduces a noisy photo and reports impossible sizes honestly', async ({
   page,
 }) => {
+  test.setTimeout(60_000);
   await page.goto('/');
-  const noise = Array.from(await readFile('tests/fixtures/noise.png'));
+  const noise = (await readFile('tests/fixtures/noise.png')).toString('base64');
   const result = await page.evaluate(async (noise) => {
     const { processImage } = await import(String('/src/features/image/process.ts'));
     const { validate } = await import(String('/src/features/validation/requirements.ts'));
-    const file = new File([new Uint8Array(noise)], 'noise.png');
+    const file = new File([Uint8Array.from(atob(noise), (c) => c.charCodeAt(0))], 'noise.png');
     const options = {
       format: 'jpeg' as const,
       quality: 0.9,

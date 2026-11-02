@@ -53,13 +53,13 @@ export function RequirementsEditor({
   return (
     <section className="requirements" aria-label="Requirements editor">
       <div className="section-label">
-        <span>02 / MAKE IT FIT</span>
-        <span className="small-label">You're in control</span>
+        <span>Requirements</span>
+        <span className="small-label">Editable limits</span>
       </div>
       <fieldset disabled={disabled}>
         <div className="parser-panel">
           <label className="parser-title" htmlFor="upload-error">
-            <ScanText size={17} /> Paste the upload error <span>OPTIONAL</span>
+            <ScanText size={17} /> Paste the upload error <span>Optional</span>
           </label>
           <textarea
             id="upload-error"
@@ -98,6 +98,7 @@ export function RequirementsEditor({
                             {
                               formats: 'Accepted formats',
                               maxBytes: 'Maximum size',
+                              minBytes: 'Minimum size',
                               minWidth: 'Minimum width',
                               minHeight: 'Minimum height',
                               maxWidth: 'Maximum width',
@@ -113,7 +114,7 @@ export function RequirementsEditor({
                       <b>
                         {key === 'formats'
                           ? (v as Format[]).map((f) => f.toUpperCase()).join(', ')
-                          : key === 'maxBytes'
+                          : key === 'maxBytes' || key === 'minBytes'
                             ? formatBytes(v as number)
                             : String(v)}
                       </b>
@@ -143,7 +144,7 @@ export function RequirementsEditor({
             </div>
           )}
         </div>
-        <div className="manual-heading">Or set the requirements yourself</div>
+        <div className="manual-heading">File requirements</div>
         <div className="fields-grid">
           <label className="field">
             Output format
@@ -197,6 +198,49 @@ export function RequirementsEditor({
             </span>
           </label>
         </div>
+        <details className="accepted-formats">
+          <summary>Accepted formats & minimum size</summary>
+          <div className="format-checkboxes">
+            {(['jpeg', 'png', 'webp', 'pdf'] as Format[]).map((f) => (
+              <label key={f}>
+                <input
+                  type="checkbox"
+                  checked={r.formats.includes(f)}
+                  onChange={(e) =>
+                    onChange({
+                      ...r,
+                      formats: e.target.checked
+                        ? [...r.formats, f]
+                        : r.formats.filter((v) => v !== f),
+                    })
+                  }
+                />
+                {f.toUpperCase()}
+              </label>
+            ))}
+          </div>
+          <label className="field">
+            Minimum file size (KB)
+            <input
+              aria-label="Minimum file size"
+              type="number"
+              min="0.001"
+              step="any"
+              value={r.minBytes === undefined ? '' : r.minBytes / 1000}
+              placeholder="No minimum"
+              onChange={(e) =>
+                onChange({
+                  ...r,
+                  minBytes: e.target.value ? Math.ceil(Number(e.target.value) * 1000) : undefined,
+                })
+              }
+            />
+          </label>
+          <p className="field-note">
+            A minimum is checked after processing. We do not add artificial padding to inflate file
+            size.
+          </p>
+        </details>
         {pdf ? (
           <>
             <div className="fields-grid">{number('maxPages', 'Maximum pages', 'pages')}</div>

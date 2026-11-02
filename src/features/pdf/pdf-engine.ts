@@ -1,8 +1,9 @@
-import { PDFDocument, PageSizes } from 'pdf-lib';
+import { PDFDocument, PageSizes, degrees } from 'pdf-lib';
 import { LIMITS } from '../../types/files';
 import type { Format } from '../../types/files';
 
-export type PdfOperation = 'merge' | 'extract' | 'remove' | 'reorder' | 'images';
+export type PdfOperation = 'merge' | 'extract' | 'remove' | 'reorder' | 'rotate' | 'images';
+export type PdfRotation = 90 | 180 | 270;
 export interface PdfInput {
   bytes: Uint8Array;
   format: Format;
@@ -47,6 +48,7 @@ export async function processPdf(
   inputs: PdfInput[],
   operation: PdfOperation,
   selection: string,
+  rotation: PdfRotation = 90,
 ): Promise<Uint8Array> {
   if (inputs.length === 0) throw new Error('Choose at least one file.');
   const output = await PDFDocument.create();
@@ -83,13 +85,20 @@ export async function processPdf(
       throw new Error('This operation requires PDF files.');
     if (operation !== 'merge' && inputs.length !== 1)
       throw new Error('Choose one PDF for this operation.');
-    if (!['merge', 'extract', 'remove', 'reorder'].includes(operation))
+    if (!['merge', 'extract', 'remove', 'reorder', 'rotate'].includes(operation))
       throw new Error('Choose a supported PDF operation.');
+    if (operation === 'rotate' && ![90, 180, 270].includes(rotation))
+      throw new Error('Choose a rotation of 90, 180 or 270 degrees.');
 
     for (const { bytes } of inputs) {
       const source = await loadPdf(bytes);
       let indexes = source.getPageIndices();
-      if (operation !== 'merge') {
+      let rotated: Set<number> | undefined;
+      if (operation === 'rotate') {
+        rotated = new Set(
+          selection.trim() ? parsePages(selection, source.getPageCount()) : indexes,
+        );
+      } else if (operation !== 'merge') {
         const selected = parsePages(selection, source.getPageCount());
         if (operation === 'remove') {
           const removed = new Set(selected);
@@ -106,7 +115,12 @@ export async function processPdf(
         throw new Error(`The combined PDF exceeds ${LIMITS.pages} pages.`);
       }
       const pages = await output.copyPages(source, indexes);
-      pages.forEach((page) => output.addPage(page));
+      pages.forEach((page, position) => {
+        if (rotated?.has(indexes[position])) {
+          page.setRotation(degrees((((page.getRotation().angle + rotation) % 360) + 360) % 360));
+        }
+        output.addPage(page);
+      });
     }
   }
 
