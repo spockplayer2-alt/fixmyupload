@@ -1,5 +1,14 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { PDFArray, PDFDict, PDFDocument, PDFName, PDFRawStream, decodePDFRawStream } from 'pdf-lib';
+import { getEventListeners } from 'node:events';
+import {
+  PDFArray,
+  PDFDict,
+  PDFDocument,
+  PDFName,
+  PDFRawStream,
+  decodePDFRawStream,
+  degrees,
+} from 'pdf-lib';
 import { inspectPdf, parsePages, processPdf } from '../../src/features/pdf/pdf-engine';
 import { inspectPdfInWorker, processPdfInWorker } from '../../src/features/pdf/pdf-client';
 
@@ -121,6 +130,39 @@ describe('PDF page transformations', () => {
       '3,1-2',
     );
     expect(await widthsOf(result)).toEqual([320, 300, 310]);
+  });
+
+  it('rotates every page clockwise by 90 degrees when the selection is empty', async () => {
+    const result = await processPdf([{ bytes: await fixture(), format: 'pdf' }], 'rotate', '');
+    const pages = (await PDFDocument.load(result)).getPages();
+    expect(pages.map((page) => page.getRotation().angle)).toEqual([90, 90, 90]);
+    expect(pages.map((page) => page.getWidth())).toEqual([300, 310, 320]);
+  });
+
+  it.each([
+    [90, [270, 0, 180]],
+    [180, [270, 90, 270]],
+    [270, [270, 180, 0]],
+  ] as const)(
+    'adds %i degrees only to selected pages, preserving page order and existing angles',
+    async (rotation, expected) => {
+      const source = await PDFDocument.load(await fixture());
+      source.getPage(0).setRotation(degrees(270));
+      source.getPage(1).setRotation(degrees(270));
+      source.getPage(2).setRotation(degrees(90));
+      const bytes = await source.save();
+      const result = await processPdf([{ bytes, format: 'pdf' }], 'rotate', '3, 2', rotation);
+      const pages = (await PDFDocument.load(result)).getPages();
+      expect(pages.map((page) => page.getRotation().angle)).toEqual(expected);
+      expect(pages.map((page) => page.getWidth())).toEqual([300, 310, 320]);
+    },
+  );
+
+  it('validates selected pages and supported rotation angles before creating an output', async () => {
+    const input = [{ bytes: await fixture(), format: 'pdf' as const }];
+    await expect(processPdf(input, 'rotate', '4', 90)).rejects.toThrow(/between|page/i);
+    await expect(processPdf(input, 'rotate', '1,1', 90)).rejects.toThrow(/once|duplicate/i);
+    await expect(processPdf(input, 'rotate', '', 45 as 90)).rejects.toThrow(/90|180|270/);
   });
 
   it('rejects an incomplete reorder and removal of every page', async () => {
@@ -296,6 +338,52 @@ describe('PDF worker lifecycle', () => {
     await result;
     expect(bytes.byteLength).toBe(4);
     expect(WorkerHarness.current.terminated).toBe(true);
+  });
+
+  it.each(['inspection', 'processing'] as const)(
+    'immediately terminates aborted PDF %s and rejects with AbortError',
+    async (kind) => {
+      const controller = new AbortController();
+      const bytes = new Uint8Array([37, 80, 68, 70]);
+      const pending =
+        kind === 'inspection'
+          ? inspectPdfInWorker(bytes, controller.signal)
+          : processPdfInWorker([{ bytes, format: 'pdf' }], 'rotate', '', 90, controller.signal);
+      void pending.catch(() => {});
+      const worker = WorkerHarness.current;
+      controller.abort();
+      expect(worker.terminated).toBe(true);
+      await expect(pending).rejects.toMatchObject({ name: 'AbortError' });
+      expect(getEventListeners(controller.signal, 'abort')).toHaveLength(0);
+      expect(vi.getTimerCount()).toBe(0);
+    },
+  );
+
+  it.each(['inspection', 'processing'] as const)(
+    'does not create a worker for pre-aborted PDF %s',
+    async (kind) => {
+      const controller = new AbortController();
+      controller.abort();
+      const previous = WorkerHarness.current;
+      const bytes = new Uint8Array([37, 80, 68, 70]);
+      const pending =
+        kind === 'inspection'
+          ? inspectPdfInWorker(bytes, controller.signal)
+          : processPdfInWorker([{ bytes, format: 'pdf' }], 'rotate', '', 90, controller.signal);
+      void pending.catch(() => {});
+      expect(WorkerHarness.current).toBe(previous);
+      await expect(pending).rejects.toMatchObject({ name: 'AbortError' });
+      expect(vi.getTimerCount()).toBe(0);
+    },
+  );
+
+  it('removes the abort listener after a successful worker result', async () => {
+    const controller = new AbortController();
+    const pending = inspectPdfInWorker(new Uint8Array([37, 80, 68, 70]), controller.signal);
+    expect(getEventListeners(controller.signal, 'abort')).toHaveLength(1);
+    WorkerHarness.current.respond({ ok: true, value: 3 });
+    await expect(pending).resolves.toBe(3);
+    expect(getEventListeners(controller.signal, 'abort')).toHaveLength(0);
   });
 
   it('forwards a processing failure and releases the worker', async () => {

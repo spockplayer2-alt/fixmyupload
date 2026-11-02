@@ -12,7 +12,9 @@ scope.onmessage = async ({ data }) => {
     if (data.kind === 'inspect') {
       scope.postMessage({ ok: true, value: await inspectPdf(data.bytes) });
     } else {
-      const bytes = Uint8Array.from(await processPdf(data.inputs, data.operation, data.selection));
+      const bytes = Uint8Array.from(
+        await processPdf(data.inputs, data.operation, data.selection, data.rotation),
+      );
       scope.postMessage({ ok: true, value: bytes }, [bytes.buffer]);
     }
   } catch (error) {

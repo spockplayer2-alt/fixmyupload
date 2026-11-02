@@ -15,7 +15,7 @@ const dimensionKeys = [
   'width',
   'height',
 ] as const;
-const integerKeys = ['maxBytes', ...dimensionKeys, 'maxPages'] as const;
+const integerKeys = ['minBytes', 'maxBytes', ...dimensionKeys, 'maxPages'] as const;
 const positiveInteger = (value: unknown): value is number =>
   typeof value === 'number' && Number.isSafeInteger(value) && value > 0;
 const positiveNumber = (value: unknown): value is number =>
@@ -38,6 +38,12 @@ export function conflicts(r: Requirements): string[] {
   }
   if (r.aspectRatio !== undefined && !positiveNumber(r.aspectRatio)) {
     issues.push('Aspect ratio must be a positive, finite number.');
+  }
+  if (positiveInteger(r.minBytes)) {
+    if (positiveInteger(r.maxBytes) && r.minBytes > r.maxBytes)
+      issues.push('Minimum file size exceeds maximum file size.');
+    if (r.minBytes > LIMITS.fileBytes)
+      issues.push('Minimum file size exceeds the 30 MB safety limit.');
   }
 
   for (const side of ['Width', 'Height'] as const) {
@@ -117,11 +123,14 @@ export function validate(info: FileInfo, r: Requirements): Check[] {
     },
     {
       label: 'File size',
-      required: `≤ ${maxBytes.toLocaleString('en-US')} bytes`,
+      required: `${positiveInteger(r.minBytes) ? `≥ ${r.minBytes.toLocaleString('en-US')}; ` : ''}≤ ${maxBytes.toLocaleString('en-US')} bytes`,
       actual: positiveInteger(info.size)
         ? `${info.size.toLocaleString('en-US')} bytes`
         : 'Unknown or invalid',
-      passed: positiveInteger(info.size) && info.size <= maxBytes,
+      passed:
+        positiveInteger(info.size) &&
+        info.size <= maxBytes &&
+        (r.minBytes === undefined || (positiveInteger(r.minBytes) && info.size >= r.minBytes)),
     },
   ];
   if (issues.length) {

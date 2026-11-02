@@ -72,14 +72,14 @@ export async function decodeImage(blob: Blob): Promise<ImageBitmap> {
     );
   }
 }
-export async function inspectFile(file: File): Promise<FileInfo> {
+export async function inspectFile(file: File, signal?: AbortSignal): Promise<FileInfo> {
   if (!file.size || file.size > LIMITS.fileBytes)
     throw new Error('Choose a non-empty file up to 30 MB.');
   const format = detectFormat(new Uint8Array(await file.slice(0, 16).arrayBuffer()));
   if (!format) throw new Error('File not supported. Choose a JPEG, PNG, WebP image or PDF.');
   if (format === 'pdf') {
     const { inspectPdfInWorker } = await import('../pdf/pdf-client');
-    const pages = await inspectPdfInWorker(new Uint8Array(await file.arrayBuffer()));
+    const pages = await inspectPdfInWorker(new Uint8Array(await file.arrayBuffer()), signal);
     return { name: file.name, format, size: file.size, pages };
   }
   const bitmap = await decodeImage(file);
@@ -110,19 +110,57 @@ export async function processImage(
   file: File,
   r: Requirements,
   options: ImageOptions,
+  signal?: AbortSignal,
 ): Promise<Output> {
+  const checkCancelled = () => {
+    if (signal?.aborted) throw new DOMException('Processing cancelled.', 'AbortError');
+  };
+  checkCancelled();
+  const rotation = options.rotation ?? 0;
+  if (![0, 90, 180, 270].includes(rotation))
+    throw new Error('Image rotation must be 0, 90, 180 or 270 degrees.');
+  for (const position of [options.cropX, options.cropY]) {
+    if (position !== undefined && (!Number.isFinite(position) || position < 0 || position > 1))
+      throw new Error('Crop positions must be between 0 and 1.');
+  }
   const bitmap = await decodeImage(file);
-  const canvas = document.createElement('canvas');
+  let canvas: HTMLCanvasElement | undefined;
+  let transformed: HTMLCanvasElement | undefined;
   try {
-    const plan = planDimensions(bitmap.width, bitmap.height, r, options.fit);
+    checkCancelled();
+    let source: CanvasImageSource = bitmap;
+    let sourceWidth = bitmap.width;
+    let sourceHeight = bitmap.height;
+    // createImageBitmap already applies EXIF orientation. User transforms follow
+    // that orientation and precede crop/resize planning; flips use the visible axes.
+    if (rotation || options.flipHorizontal || options.flipVertical) {
+      transformed = document.createElement('canvas');
+      const swapsSides = rotation === 90 || rotation === 270;
+      transformed.width = sourceWidth = swapsSides ? bitmap.height : bitmap.width;
+      transformed.height = sourceHeight = swapsSides ? bitmap.width : bitmap.height;
+      const context = transformed.getContext('2d');
+      if (!context) throw new Error('Image processing is unavailable in this browser.');
+      context.translate(sourceWidth / 2, sourceHeight / 2);
+      context.scale(options.flipHorizontal ? -1 : 1, options.flipVertical ? -1 : 1);
+      context.rotate((rotation * Math.PI) / 180);
+      context.drawImage(bitmap, -bitmap.width / 2, -bitmap.height / 2);
+      source = transformed;
+    }
+    const plan = planDimensions(sourceWidth, sourceHeight, r, options.fit);
+    canvas = document.createElement('canvas');
     let width = plan.width,
       height = plan.height;
     const warnings = ['Image metadata is removed. Animated images use a single frame.'];
     if (plan.upscaled) warnings.push('This image was enlarged. Fine detail may look softer.');
     if (options.fit === 'crop')
-      warnings.push('The image is center-cropped to fit the requested shape.');
+      warnings.push(
+        (options.cropX ?? 0.5) === 0.5 && (options.cropY ?? 0.5) === 0.5
+          ? 'The image is center-cropped to fit the requested shape.'
+          : 'The image is cropped at the selected position to fit the requested shape.',
+      );
     let blob: Blob | undefined;
     for (let resize = 0; resize < 14; resize++) {
+      checkCancelled();
       canvas.width = width;
       canvas.height = height;
       const ctx = canvas.getContext('2d');
@@ -135,22 +173,28 @@ export async function processImage(
       }
       const scale =
         options.fit === 'crop'
-          ? Math.max(width / bitmap.width, height / bitmap.height)
-          : Math.min(width / bitmap.width, height / bitmap.height);
-      const dw = bitmap.width * scale,
-        dh = bitmap.height * scale;
-      ctx.drawImage(bitmap, (width - dw) / 2, (height - dh) / 2, dw, dh);
+          ? Math.max(width / sourceWidth, height / sourceHeight)
+          : Math.min(width / sourceWidth, height / sourceHeight);
+      const dw = sourceWidth * scale,
+        dh = sourceHeight * scale;
+      const cropX = options.fit === 'crop' ? (options.cropX ?? 0.5) : 0.5;
+      const cropY = options.fit === 'crop' ? (options.cropY ?? 0.5) : 0.5;
+      ctx.drawImage(source, (width - dw) * cropX, (height - dh) * cropY, dw, dh);
       blob = await encode(canvas, options, options.quality);
+      checkCancelled();
       if (!r.maxBytes || blob.size <= r.maxBytes) break;
       if (options.format !== 'png') {
         let low = 0.2,
           high = options.quality;
         const smallest = await encode(canvas, options, low);
+        checkCancelled();
         if (smallest.size <= r.maxBytes) {
           blob = smallest;
           for (let attempt = 0; attempt < 8; attempt++) {
+            checkCancelled();
             const middle = (low + high) / 2;
             const candidate = await encode(canvas, options, middle);
+            checkCancelled();
             if (candidate.size <= r.maxBytes) {
               blob = candidate;
               low = middle;
@@ -169,6 +213,7 @@ export async function processImage(
     }
     if (!blob) throw new Error('No output could be created.');
     const actualFormat = detectFormat(new Uint8Array(await blob.slice(0, 16).arrayBuffer()));
+    checkCancelled();
     if (actualFormat !== options.format)
       throw new Error('The browser returned an unexpected output format.');
     const output = await decodeImage(blob);
@@ -180,10 +225,11 @@ export async function processImage(
       height: output.height,
     };
     output.close();
+    checkCancelled();
     return { blob, info, warnings };
   } finally {
     bitmap.close();
-    canvas.width = 0;
-    canvas.height = 0;
+    if (canvas) canvas.width = canvas.height = 0;
+    if (transformed) transformed.width = transformed.height = 0;
   }
 }

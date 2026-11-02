@@ -135,6 +135,30 @@ describe('English upload errors', () => {
     expect(parseError('2 MB maximum').requirements.maxBytes).toBe(2000000);
     expect(parseError('Fewer than 4 pages').requirements.maxPages).toBe(3);
   });
+  it('recognizes explicit minimum file sizes without inventing a maximum', () => {
+    for (const text of [
+      'At least 100 KB',
+      'Minimum 100 KB',
+      '100 KB minimum',
+      'No less than 100 KB',
+    ]) {
+      expect(parseError(text).requirements).toEqual({ formats: [], minBytes: 100000 });
+    }
+    expect(parseError('More than 1.5 KiB').requirements).toEqual({ formats: [], minBytes: 1537 });
+    expect(parseError('At least 1.5 bytes').requirements.minBytes).toBe(2);
+    expect(parseError('Minimum 100 KB; maximum 2 MB').requirements).toMatchObject({
+      minBytes: 100000,
+      maxBytes: 2000000,
+    });
+    for (const text of [
+      'Around 100 KB',
+      'Must not be at least 100 KB',
+      'Must not be under 100 KB',
+    ]) {
+      expect(parseError(text).requirements).toEqual({ formats: [] });
+      expect(parseError(text).ambiguities.length).toBeGreaterThan(0);
+    }
+  });
   it('parses named dimensions and aspect ratios', () => {
     expect(
       parseError('Minimum width 640 px and maximum height 1080 px. Aspect ratio 16:9.')
@@ -284,6 +308,20 @@ describe('English upload errors', () => {
 });
 
 describe('validation', () => {
+  it('checks minimum file size against measured bytes and both maximum bounds', () => {
+    const info = { name: 'x.png', format: 'png' as const, size: 99, width: 10, height: 10 };
+    const r = { formats: [], minBytes: 100, maxBytes: 200 };
+    expect(validate(info, r).find((check) => check.label === 'File size')?.passed).toBe(false);
+    expect(validate({ ...info, size: 100 }, r).every((check) => check.passed)).toBe(true);
+    expect(
+      validate({ ...info, size: 201 }, r).find((check) => check.label === 'File size')?.passed,
+    ).toBe(false);
+    for (const minBytes of [NaN, Infinity, -1, 0, 1.5, 30_000_001]) {
+      expect(conflicts({ formats: [], minBytes }).length).toBeGreaterThan(0);
+    }
+    expect(conflicts({ formats: [], minBytes: 201, maxBytes: 200 }).length).toBeGreaterThan(0);
+    expect(conflicts({ formats: [], minBytes: 200, maxBytes: 200 })).toEqual([]);
+  });
   it('never passes an output that fails one restriction', () => {
     const result = validate(
       { name: 'x.jpg', format: 'jpeg', size: 600000, width: 800, height: 800 },

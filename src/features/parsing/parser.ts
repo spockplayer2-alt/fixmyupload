@@ -183,9 +183,11 @@ export function parseError(input: string): ParsedError {
     const value = numericValue(match[1]) * units[match[2]];
     if (kind === 'max' || kind === 'under')
       add('maxBytes', kind === 'under' ? Math.ceil(value) - 1 : Math.floor(value));
+    else if (kind === 'min' || kind === 'over')
+      add('minBytes', kind === 'over' ? Math.floor(value) + 1 : Math.ceil(value));
     else
       ambiguities.push(
-        'A file size was mentioned without a clear maximum. Enter the maximum file size.',
+        'A file size was mentioned without a clear minimum or maximum. Enter the file size limits.',
       );
   }
 

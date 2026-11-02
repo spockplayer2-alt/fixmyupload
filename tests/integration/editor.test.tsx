@@ -33,7 +33,7 @@ it('requires explicit confirmation when parsed instructions are ambiguous', () =
   fireEvent.click(screen.getByRole('button', { name: 'Read requirements' }));
   const apply = screen.getByRole('button', { name: 'Apply detected requirements' });
   expect(apply).toBeDisabled();
-  fireEvent.click(screen.getByRole('checkbox'));
+  fireEvent.click(screen.getByRole('checkbox', { name: /I've checked/ }));
   expect(apply).toBeEnabled();
   fireEvent.click(apply);
   expect(screen.getByLabelText('Maximum file size')).toHaveValue(null);

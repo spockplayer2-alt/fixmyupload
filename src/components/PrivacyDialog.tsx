@@ -51,11 +51,13 @@ export function PrivacyDialog({ onClose }: { onClose: () => void }) {
       <p>
         All file processing and error parsing happens in your browser. Files and pasted text are
         never sent to a conversion service, stored by this app, or used for analytics. Reloading
-        clears them.
+        clears them. Presets store settings only after you choose Save preset; you can delete them
+        in the preset controls.
       </p>
       <p>
         The hosting provider receives normal page requests, such as your IP address. The GitHub link
-        opens an external website. No external fonts, tracking scripts or advertising are loaded.
+        opens an external website. The Geist font and all processing libraries are served locally.
+        No tracking scripts or advertising are loaded.
       </p>
       <p>
         Limits: 30 MB per file, 60 MB per batch, 20 input files, 12 megapixels per image and 100 PDF
