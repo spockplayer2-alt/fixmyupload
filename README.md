@@ -11,6 +11,8 @@
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-718a59" alt="MIT license"></a>
 </p>
 
+[**Open FixMyUpload**](https://spockplayer2-alt.github.io/fixmyupload/)
+
 ![FixMyUpload running in a desktop browser](docs/screenshot.png)
 
 ## Why FixMyUpload?
